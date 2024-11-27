@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { devtools } from "zustand/middleware"
+import { createJSONStorage, devtools, persist } from "zustand/middleware"
 import { DraftPatient, Patient } from "./types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -8,17 +8,26 @@ type PatientState = {
     activeId: Patient['id']
 
     addPatient: (data: DraftPatient) => void
+    updatePatient: (id:Patient['id'], data: DraftPatient) => void
     deletePatient: (id: Patient['id']) => void
     setActiveId: (id: Patient['id']) => void
 }
 
-export const usePatientStore = create<PatientState>()(devtools(((set) => ({
+export const usePatientStore = create<PatientState>()(
+    devtools(persist(((set) => ({
     patients: [],
     activeId: "",
     addPatient: (data) => {
-        const newPatient:Patient = {...data, id:uuidv4()}
+        // add or update patient
         set((state) => ({
-            patients: [...state.patients, newPatient]
+            patients: [...state.patients, {...data, id: uuidv4()}]
+        }))
+    },
+    updatePatient: (id, data) => {
+        // add or update patient
+        set((state) => ({
+            patients: state.patients.map(patient => patient.id === id ? {...data, id} : patient),
+            activeId: ""
         }))
     },
     deletePatient: (id) => {
@@ -27,10 +36,12 @@ export const usePatientStore = create<PatientState>()(devtools(((set) => ({
         }))
     },
     setActiveId: (id) => {
-        
         set(()=>({
             activeId: id
         }))
     },
-}))
+})),{
+    name: 'patient-storage',
+    storage: createJSONStorage(() => localStorage)
+})
 ))
